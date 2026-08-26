@@ -68,7 +68,7 @@
     <span class="tag tag-accent-2" style="position: relative; z-index: 1; font-size: 12px; padding: 6px 12px;">who owes what 🐾</span>
   </div>
 
-  <div class="card elev-sm" style="padding: 20px; display: flex; flex-direction: column; gap: 16px; background: #fff2eb; border: 1px solid #ffe1d0;">
+  <div class="card elev-sm" style="padding: 20px; display: flex; flex-direction: column; gap: 16px; background: #ffede3; border: 1px solid #ffc6a5;">
     <div style="display: flex; align-items: flex-end; gap: 12px;">
       <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
         <span style="font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; font-weight: 700; color: var(--color-accent-700);">Total bill</span>
@@ -111,6 +111,9 @@
           <button class="tag tag-accent-2" style="cursor: pointer; padding: 8px 14px; font-size: 13px; border: 0;" onClick="{{ onUseDetailSum }}">{{ detailSumLabel }}</button>
         </sc-if>
       </div>
+      <sc-if value="{{ detailMatchText }}" hint-placeholder-val="{{ false }}">
+        <span style="font-size: 12px; color: var(--color-accent-700);">{{ detailMatchText }}</span>
+      </sc-if>
     </div>
     <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
       <span style="font-size: 13px; color: var(--color-neutral-700);">Round to</span>
@@ -120,7 +123,7 @@
     </div>
   </div>
 
-  <div class="card elev-sm" style="padding: 20px; display: flex; flex-direction: column; gap: 4px; background: #f0fae1; border: 1px solid #e1eecc;">
+  <div class="card elev-sm" style="padding: 20px; display: flex; flex-direction: column; gap: 4px; background: #edf8dc; border: 1px solid #ccdbb2;">
     <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px;">
       <h2 style="font-family: var(--font-heading); font-weight: 400; font-size: 19px; margin: 0; color: var(--color-accent-2-800);">Who's eating</h2>
       <span style="font-size: 12px; color: var(--color-accent-2-700);">{{ linkHint }}</span>
@@ -141,7 +144,7 @@
     </div>
   </div>
 
-  <div class="card elev-sm" style="padding: 20px; display: flex; flex-direction: column; gap: 12px; background: #e1eecc; border: 1px solid #ccdbb2;">
+  <div class="card elev-sm" style="padding: 20px; display: flex; flex-direction: column; gap: 12px; background: #deedca; border: 1px solid #b9d39c;">
     <h2 style="font-family: var(--font-heading); font-weight: 400; font-size: 19px; margin: 0; color: var(--color-accent-2-800);">Who paid the whole thing</h2>
     <div style="display: flex; flex-wrap: wrap; gap: 8px;">
       <sc-for list="{{ payerChips }}" as="c" hint-placeholder-count="3">
@@ -150,7 +153,7 @@
     </div>
   </div>
 
-  <div class="card elev-md" style="padding: 22px; background: #ffe1d0; border: 1px solid #ffc6a5; display: flex; flex-direction: column; gap: 14px;">
+  <div class="card elev-md" style="padding: 22px; background: #ffdcc8; border: 1px solid #f6a06b; display: flex; flex-direction: column; gap: 14px;">
     <div style="display: flex; flex-direction: column; gap: 2px;">
       <h2 style="font-family: var(--font-heading); font-weight: 400; font-size: 21px; margin: 0; color: var(--color-accent-800);">Who pays who</h2>
       <span style="font-size: 12px; color: var(--color-accent-700);">{{ perHeadNote }}</span>
@@ -271,6 +274,7 @@ class Component extends DCLogic {
     const payer = active.find(p => p.id === st.payer) || active[0] || null;
 
     const details = st.details || [];
+    const detailSum = details.reduce((a, i) => a + this.num(i.amount), 0);
     const validItems = details.filter(i => i.who && i.who !== 'all' && activeIds.indexOf(i.who) >= 0 && this.num(i.amount) > 0);
     const personalOf = id => validItems.filter(i => i.who === id).reduce((a, i) => a + this.num(i.amount), 0);
     const total = this.num(st.total);
@@ -387,9 +391,15 @@ class Component extends DCLogic {
       if (!n) return;
       this.set({ people: people.concat([{ id: this.uid(), name: n, active: true, pair: null }]), draftName: '' });
     };
+    const updateDetails = nextDetails => this.set({
+      details: nextDetails,
+      ...(st.splitMode === 'individual' && nextDetails.some(d => this.num(d.amount) > 0)
+        ? { total: String(nextDetails.reduce((a, d) => a + this.num(d.amount), 0)) }
+        : {})
+    });
 
     let warning = '';
-    if (st.splitMode === 'individual' && total > 0 && shared < 0) warning = 'Assigned dishes add up to more than the bill \u2014 check the numbers?';
+    if (st.splitMode === 'individual' && detailSum > 0 && Math.abs(detailSum - total) > 0.000001) warning = 'Dish total ' + this.fmt(detailSum) + ' does not match the bill ' + this.fmt(total) + '.';
     else if (!payer) warning = 'Tap who paid to see the split.';
     else if (total > 0 && active.length < 2) warning = 'Add at least two people to split with.';
 
@@ -402,15 +412,18 @@ class Component extends DCLogic {
       onTotal: e => this.set({ total: e.target.value }),
       detailRows: (st.details || []).map(d => ({
         key: d.id, label: d.label, amount: d.amount, who: d.who || 'all',
-        onWho: e => this.set({ details: st.details.map(x => x.id === d.id ? { ...x, who: e.target.value } : x) }),
+        onWho: e => updateDetails(st.details.map(x => x.id === d.id ? { ...x, who: e.target.value } : x)),
         onLabel: e => this.set({ details: st.details.map(x => x.id === d.id ? { ...x, label: e.target.value } : x) }),
-        onAmount: e => this.set({ details: st.details.map(x => x.id === d.id ? { ...x, amount: e.target.value } : x) }),
+        onAmount: e => updateDetails(st.details.map(x => x.id === d.id ? { ...x, amount: e.target.value } : x)),
         onRemove: () => this.set({ details: st.details.filter(x => x.id !== d.id) })
       })),
       onAddDetail: () => this.set({ details: (st.details || []).concat([{ id: this.uid(), label: '', amount: '', who: 'all' }]) }),
       hasDetailSum: (st.details || []).some(d => this.num(d.amount) > 0),
-      detailSumLabel: '= ' + this.fmt((st.details || []).reduce((a, d) => a + this.num(d.amount), 0)) + ' \u2014 tap to use as total',
-      onUseDetailSum: () => this.set({ total: String((st.details || []).reduce((a, d) => a + this.num(d.amount), 0)) }),
+       detailSumLabel: '= ' + this.fmt(detailSum) + (st.splitMode === 'individual' ? ' — total updates automatically' : ' — tap to use as total'),
+       detailMatchText: st.splitMode === 'individual' && detailSum > 0
+         ? (Math.abs(detailSum - total) < 0.000001 ? 'Dish total matches bill.' : 'Dish total ' + this.fmt(detailSum) + ' · bill ' + this.fmt(total))
+         : '',
+       onUseDetailSum: () => this.set({ total: String(detailSum) }),
       onCurrency: e => this.set({ currency: e.target.value, round: null }),
       linkHint: st.linkFrom ? 'step 2: tap \u2764 on their partner' : 'everyone pays \u3079\u3064\u3079\u3064\u306b \u2014 tap it to make a couple pay \u3044\u3063\u3057\u3087\u306b \u2764',
       personRows: personRows,
@@ -431,7 +444,7 @@ class Component extends DCLogic {
          ? 'Assign each dish to the person who had it. “Everyone” dishes are shared.'
          : 'The whole bill is divided by people count; dish assignments are ignored.',
        onSplitEqual: () => this.set({ splitMode: 'equal' }),
-       onSplitItem: () => this.set({ splitMode: 'individual' }),
+        onSplitItem: () => this.set({ splitMode: 'individual', ...(detailSum > 0 ? { total: String(detailSum) } : {}) }),
        detailAddLabel: st.splitMode === 'individual' ? '+ add a dish to assign' : '+ add a dish (optional)',
        perHeadNote: total > 0 && weightTotal ? (st.splitMode === 'individual' ? this.fmt(perUnit) + ' per person count, before assigned items' : this.fmt(perUnit) + ' per person count') : 'enter the bill above',
       hasWarning: !!warning,
