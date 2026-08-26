@@ -7,6 +7,8 @@ No accounts, no server, no AI. One HTML file; all the maths runs in the browser 
 ## What it does
 
 - **Split a bill evenly** between everyone who was actually there (tap ✓ to include or sit someone out).
+- **Split by item** when people ordered different dishes; assign each dish to the person who had it and leave shared dishes as “everyone”.
+- **Count a profile as x2** with the people-count button, useful when one profile represents you and your husband.
 - **Couples pay as one wallet** — tap ♡ on two people to pair them. They still count as two shares, but the result is a single amount owed to the payer.
 - **"Just for one" items** — a dish or drink only one person had comes out of the shared pot and goes onto their tab.
 - **Whoever paid** can change per outing; the summary always reads *who pays who*.
@@ -17,9 +19,9 @@ No accounts, no server, no AI. One HTML file; all the maths runs in the browser 
 ## How the maths works
 
 ```
-shared        = total − sum(just-for-one items)
-per head      = shared ÷ number of people eating
-someone's share = per head + their own items
+equal mode    = total ÷ total people-count
+by-item mode  = (total − assigned items) ÷ total people-count + assigned items
+someone's share = their weighted shared amount + assigned items
 a wallet owes = sum of its members' shares   (rounded)
 payer gets back = total − everything collected
 ```
