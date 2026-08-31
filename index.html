@@ -45,6 +45,6 @@
   function settle(raw){const [from,to,amount]=raw.split('|'),b=book();b.settlements.push({id:id(),from,to,amount:+amount,date:today()});save();render()}
   // ponytail: greedy creditor/debtor matching is O(n²); optimize only if groups become large.
   window.saifu={transfers};const demo={members:[{id:'a',name:'Penny'},{id:'b',name:'Nina'}],currency:'JPY',expenses:[{payerId:'a',total:3360,shares:[{memberId:'a',amount:1320},{memberId:'b',amount:2040}]},{payerId:'b',total:1600,shares:[{memberId:'a',amount:650},{memberId:'b',amount:950}]},{payerId:'b',total:1380,shares:[{memberId:'a',amount:1380}]}],settlements:[]};console.assert(Math.round(transfers(demo)[0].amount)===10,'example settlement should be ¥10');
-  render();if('serviceWorker'in navigator)navigator.serviceWorker.register('sw-v3.js').catch(()=>{});
+  render();if('serviceWorker'in navigator)navigator.serviceWorker.register('sw-v4.js').catch(()=>{});
 })();
 </script></body></html>
